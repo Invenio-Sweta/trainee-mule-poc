@@ -1,0 +1,11 @@
+%dw 2.0
+
+type auto_cf4fb4b2_9257_4451_a65b_9526d0af7f06_Input_Payload = {
+  orderId: String, 
+  records: Array<{    name: String,     emailId: String,     contactNo: Number,     _?: Any  }>, 
+  processingDate: String, 
+  noOfRecords: Number, 
+  processingTime: Number, 
+  _?: Any
+}
+

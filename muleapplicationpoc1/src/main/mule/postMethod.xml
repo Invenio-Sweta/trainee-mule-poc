@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+
+	<flow name="post-method-flow" doc:id="cf4fb4b2-9257-4451-a65b-9526d0af7f06" >
+		<logger level="INFO" doc:name="logRequestPayload" doc:id="e2971530-f0cc-4e41-b3c5-7dcb5910f1ab" message="#[payload]"/>
+		<ee:transform doc:name="setProcessingDate" doc:id="598df5e8-84e4-49d0-9c9b-073025c545fa" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="processingDate" ><![CDATA[%dw 2.0
+output application/json
+---
+flatten(payload.processingDate scan ".{2}") joinBy  '-']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Processing Date" doc:id="2b600d4d-df21-4ecf-93ab-ad2deaf23267" message="#[vars.processingDate]"/>
+		<choice doc:name="validateProcessingDate" doc:id="64e104a5-be49-4971-9e5d-ec4b6a71fe55" >
+			<when expression='#[vars.processingDate &lt; now() as String {format: "dd-MM-uuuu"}]'>
+				<ee:transform doc:name="jsonToCSV" doc:id="5acc47e7-403c-4322-acc0-a8adbabbe6bc">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/csv
+---
+payload.records map {
+    "order-id": payload.orderId,
+    "user-name": upper($.name),
+    "phone-number": "+91 " ++ $.contactNo,
+    "mail": $.emailId
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<otherwise >
+				<ee:transform doc:name="setErrorMessage" doc:id="5c4b3f1a-6975-4918-a7b2-a1610a1ba356" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "errorMessage" : "Processing date is incorrect.",
+  "status": "Failed"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<logger level="INFO" doc:name="LogResponsePayload" doc:id="84b39a59-088c-4a62-a973-2137ab1ba64e" message="#[payload]"/>
+	</flow>
+</mule>
