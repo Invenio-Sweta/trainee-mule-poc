@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd">
+	<sftp:config name="SFTP_Config" doc:name="SFTP Config" doc:id="9e518330-786e-4238-8e07-ea94faaaa1ca" >
+		<sftp:connection host="192.168.4.138" username="invenio" password="Invenio" workingDir="/"/>
+	</sftp:config>
+	<flow name="emp-invoke-subflowFlow1" doc:id="f77e5fbc-27c2-4fa0-b85b-adf34a399a18" >
+		<logger level="INFO" doc:name="startLogger" doc:id="0c308259-ec22-4dee-a7fc-f795a7799120" message="Flow Started"/>
+		<http:request method="GET" doc:name="requestEmployeeDetails" doc:id="c23301c6-6bb8-4572-bf9a-6101d8e30380" url="https://dummy.restapiexample.com/api/v1/employees" sendCorrelationId="NEVER">
+		</http:request>
+		<ee:transform doc:name="employeeDetails" doc:id="af4f2560-0324-4699-9017-e4c1971540ea" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.data filter ($.employee_age > 60)
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="payloadAboveAge60" doc:id="6aa2a7dc-613e-4526-864a-3e2a23b43c8a" message="#[payload]"/>
+		<ee:transform doc:name="arrangeInDesendingOrder" doc:id="467f365b-ec73-4362-bb14-8cd8421e215d" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+(payload orderBy $.employee_age)[-1 to 0]]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="orgPayload" ><![CDATA[%dw 2.0
+output application/json
+---
+(payload orderBy $.employee_age)[-1 to 0]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="payloadBeforeSFTP" doc:id="f05bcfb9-21b8-4685-af9a-a96238e04f54" message="#[payload]"/>
+		<sftp:write doc:name="upload-file-SFTP" doc:id="f968eaa9-c6a1-47ba-bb23-289460c63346" path="#['orders/POC2_' ++ now() as String {format:&quot;yyyyMMddhhmmss&quot;}++ '.json']" config-ref="SFTP_Config"/>
+		<ee:transform doc:name="statusResponse" doc:id="a1f8a3c0-b084-4d12-97e1-9360fc02cbe8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.orgPayload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
